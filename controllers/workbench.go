@@ -29,6 +29,7 @@ func NewWorkbenchController(storer interfaces.Storer, httpClient interfaces.Http
 		httpClient:    httpClient,
 	}
 	controller.resetState()
+	controller.resetLEDs()
 	return controller
 }
 
@@ -233,17 +234,21 @@ func (c *WorkbenchController) PeekAllRequests(fixture enums.Fixture) []models.Re
 	return *queue.PeekAll()
 }
 
+func (c *WorkbenchController) SetLED(fixture enums.Fixture, state string) {
+	if _, err := c.httpClient.Post("/fixtures/"+fixture.StringShort(), map[string]interface{}{
+		"state": state,
+	}); err != nil {
+		panic(err)
+	}
+}
+
 func (c *WorkbenchController) SetLEDs(fixtures []models.FixtureContent) {
 	if c.httpClient == nil {
 		return
 	}
 	for _, fixture := range fixtures {
 		state := c.configuration.StateMapping[fixture.Fixture][fixture.Component.Stage()]
-		if _, err := c.httpClient.Post("/fixtures/"+fixture.Fixture.StringShort(), map[string]interface{}{
-			"state": state,
-		}); err != nil {
-			panic(err)
-		}
+		c.SetLED(fixture.Fixture, state)
 	}
 }
 
@@ -260,6 +265,13 @@ func (c *WorkbenchController) resetState() {
 		state.Requests[fixtureConfiguration.Fixture] = []models.Request{}
 	}
 	c.storeState(state)
+}
+
+func (c *WorkbenchController) resetLEDs() {
+	fixtures := c.GetFixturesContent()
+	for _, fixture := range fixtures {
+		c.SetLED(fixture.Fixture, "FREE")
+	}
 }
 
 func (c *WorkbenchController) loadState() states.WorkbenchState {
