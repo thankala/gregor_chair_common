@@ -52,7 +52,7 @@ func (c *RobotController) MoveToWorkbench(workbench enums.Workbench) {
 	workbenchConfiguration := c.getWorkbenchConfiguration(workbench)
 	// TODO: Add machine integration
 	if c.httpClient != nil {
-		if err, _ := c.httpClient.Post("/primitive/move/"+workbench.StringShort(), nil); err != nil {
+		if _, err := c.httpClient.Post("/primitive/move/"+workbench.StringShort(), nil); err != nil {
 			panic(err)
 		}
 	}
