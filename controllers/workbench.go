@@ -235,6 +235,9 @@ func (c *WorkbenchController) PeekAllRequests(fixture enums.Fixture) []models.Re
 }
 
 func (c *WorkbenchController) SetLED(fixture enums.Fixture, state string) {
+	if c.httpClient == nil {
+		return
+	}
 	if _, err := c.httpClient.Post("/fixtures/"+fixture.StringShort(), map[string]interface{}{
 		"state": state,
 	}); err != nil {
@@ -243,9 +246,6 @@ func (c *WorkbenchController) SetLED(fixture enums.Fixture, state string) {
 }
 
 func (c *WorkbenchController) SetLEDs(fixtures []models.FixtureContent) {
-	if c.httpClient == nil {
-		return
-	}
 	for _, fixture := range fixtures {
 		state := c.configuration.StateMapping[fixture.Fixture][fixture.Component.Stage()]
 		c.SetLED(fixture.Fixture, state)
