@@ -60,7 +60,7 @@ func (a *CoordinatorActor[T]) Receive(ctx *actor.Context) {
 			a.instance.Process(ctx)
 		} else {
 			if a.server != nil {
-				a.server.Send(msg.Source, msg.Destination, msg.Event, msg)
+				ctx.Send(a.serverPid, msg)
 			} else {
 				ctx.Send(ctx.Parent(), msg)
 			}
