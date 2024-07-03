@@ -47,39 +47,43 @@ func (c *RobotController) resetRobot() {
 }
 
 func (c *RobotController) MoveToStorage(storage enums.Storage) {
-	//time.Sleep(500 * time.Millisecond)
 	storageConfiguration := c.getStorageConfiguration(storage)
-	// TODO: Add machine integration
 	state := c.loadState()
 	state.Position = storageConfiguration.Position
 	state.Facing = storageConfiguration.Storage.String()
+	if c.httpClient != nil {
+		if _, err := c.httpClient.Post("/primitive/move/"+storage.StringShort(), nil); err != nil {
+			panic(err)
+		}
+	}
 	c.storeState(state)
 	logger.Get().Info("Robot moved to storage", "Robot", c.configuration.Key, "Storage", storage.String())
 }
 
 func (c *RobotController) MoveToWorkbench(workbench enums.Workbench) {
-	//time.Sleep(500 * time.Millisecond)
 	workbenchConfiguration := c.getWorkbenchConfiguration(workbench)
-	// TODO: Add machine integration
+	state := c.loadState()
+	state.Position = workbenchConfiguration.Position
+	state.Facing = workbenchConfiguration.Workbench.String()
 	if c.httpClient != nil {
 		if _, err := c.httpClient.Post("/primitive/move/"+workbench.StringShort(), nil); err != nil {
 			panic(err)
 		}
 	}
-	state := c.loadState()
-	state.Position = workbenchConfiguration.Position
-	state.Facing = workbenchConfiguration.Workbench.String()
 	c.storeState(state)
 	logger.Get().Info("Robot moved to workbench", "Robot", c.configuration.Key, "Workbench", workbench.String())
 }
 
 func (c *RobotController) MoveToConveyorBelt(conveyorBelt enums.ConveyorBelt) {
-	//time.Sleep(500 * time.Millisecond)
 	conveyorBeltConfiguration := c.getConveyorBeltConfiguration(conveyorBelt)
-	// TODO: Add machine integration
 	state := c.loadState()
 	state.Position = conveyorBeltConfiguration.Position
 	state.Facing = conveyorBeltConfiguration.ConveyorBelt.String()
+	if c.httpClient != nil {
+		if _, err := c.httpClient.Post("/primitive/move/"+conveyorBelt.StringShort(), nil); err != nil {
+			panic(err)
+		}
+	}
 	c.storeState(state)
 	logger.Get().Info("Robot moved to conveyor belt", "Robot", c.configuration.Key, "Conveyor Belt", conveyorBelt.String())
 }
@@ -127,53 +131,67 @@ func (c *RobotController) ScrewPickAndFasten() {
 // Pickup items
 
 func (c *RobotController) PickupItemFromWorkbench(item enums.Component, workbench enums.Workbench) {
-	//time.Sleep(500 * time.Millisecond)
 	state := c.loadState()
 	workbenchConfiguration := c.getWorkbenchConfiguration(workbench)
 	if state.Facing != workbenchConfiguration.Workbench.String() || state.Position != workbenchConfiguration.Position {
 		panic(fmt.Sprintf("Robot %s is facing %s and not specified coordinator_1 %s", c.configuration.Key, state.Facing, workbench.String()))
 	}
 
-	// TODO: Add machine integration
+	if c.httpClient != nil {
+		if _, err := c.httpClient.Post("/primitive/pick", nil); err != nil {
+			panic(err)
+		}
+	}
 	state.Item = item
 	c.storeState(state)
 	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", item, "From", workbench.String())
 }
 
 func (c *RobotController) PickupItemFromStorage(storage enums.Storage) {
-	//time.Sleep(500 * time.Millisecond)
 	state := c.loadState()
 	storageConfiguration := c.getStorageConfiguration(storage)
 	if state.Facing != storageConfiguration.Storage.String() || state.Position != storageConfiguration.Position {
 		panic(fmt.Sprintf("Robot %s is facing %s and not specified storage %s", c.configuration.Key, state.Facing, storage.String()))
 	}
 
-	// TODO: Add machine integration
+	if c.httpClient != nil {
+		if _, err := c.httpClient.Post("/primitive/pick", nil); err != nil {
+			panic(err)
+		}
+	}
+
 	state.Item = storageConfiguration.Component
 	c.storeState(state)
 	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", storageConfiguration.Component, "From", storage.String())
 }
 
 func (c *RobotController) PickupItemFromConveyorBelt(conveyorBelt enums.ConveyorBelt) {
-	//time.Sleep(500 * time.Millisecond)
 	state := c.loadState()
 	conveyorBeltConfiguration := c.getConveyorBeltConfiguration(conveyorBelt)
 	if state.Facing != conveyorBeltConfiguration.ConveyorBelt.String() || state.Position != conveyorBeltConfiguration.Position {
 		panic(fmt.Sprintf("Robot %s is facing %s and not specified belt %s", c.configuration.Key, state.Facing, conveyorBelt.String()))
 	}
 
-	// TODO: Add machine integration
+	if c.httpClient != nil {
+		if _, err := c.httpClient.Post("/primitive/pick", nil); err != nil {
+			panic(err)
+		}
+	}
 	state.Item = conveyorBeltConfiguration.Component
 	c.storeState(state)
 	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", conveyorBeltConfiguration.Component, "From", conveyorBelt.String())
 }
 
 // Pickup and deposit items
-func (c *RobotController) ReleaseItem() enums.Component {
-	//time.Sleep(500 * time.Millisecond)
+
+func (c *RobotController) PlaceItem() enums.Component {
 	state := c.loadState()
-	// TODO: Add machine integration
 	item := state.Item
+	if c.httpClient != nil {
+		if _, err := c.httpClient.Post("/primitive/place", nil); err != nil {
+			panic(err)
+		}
+	}
 	state.Item = enums.NoneComponent
 	c.storeState(state)
 	logger.Get().Info("Robot released item", "Robot", c.configuration.Key, "Item", item)
