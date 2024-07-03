@@ -32,8 +32,18 @@ func NewRobotController(storer interfaces.Storer, httpClient interfaces.HttpClie
 	}
 
 	controller.resetState()
+	controller.resetRobot()
 	controller.releaseLock()
 	return controller
+}
+
+func (c *RobotController) resetRobot() {
+	if c.httpClient == nil {
+		return
+	}
+	if _, err := c.httpClient.Post("/home", nil); err != nil {
+		panic(err)
+	}
 }
 
 func (c *RobotController) MoveToStorage(storage enums.Storage) {
