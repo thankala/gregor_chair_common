@@ -65,16 +65,6 @@ func (a *CoordinatorActor[T]) Receive(ctx *actor.Context) {
 				ctx.Send(ctx.Parent(), msg)
 			}
 		}
-
-		//case *messages.RequestFixture:
-		//	//a.instance.RequestFixture(msg)
-		//	//a.instance.Process(ctx, msg)
-		//case *messages.PlaceComponent:
-		//	//a.instance.PlaceComponent(msg)
-		//	a.instance.Process(ctx, msg)
-		//case *messages.AttachComponent:
-		//	//a.instance.AttachComponent(msg)
-		//	a.instance.Process(ctx, msg)
 	default:
 		panic("Unknown message payload")
 	}
