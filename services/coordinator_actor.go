@@ -48,12 +48,12 @@ func (a *CoordinatorActor[T]) Receive(ctx *actor.Context) {
 	case *messages.CoordinatorMessage:
 		if msg.Destination == a.coordinator.String() {
 			switch msg.Type {
-			case enums.PlaceComponent:
-				a.instance.PlaceComponent(msg)
-			case enums.RequestFixture:
-				a.instance.RequestFixture(msg)
-			case enums.AttachComponent:
-				a.instance.AttachComponent(msg)
+			case enums.ComponentPlaced:
+				a.instance.ComponentPlaced(msg)
+			case enums.FixtureRequested:
+				a.instance.FixtureRequested(msg)
+			case enums.ComponentAttached:
+				a.instance.ComponentAttached(msg)
 			default:
 				panic("unhandled default case")
 			}

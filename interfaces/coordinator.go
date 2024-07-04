@@ -9,7 +9,7 @@ import (
 type Coordinator[T any] interface {
 	Coordinator() enums.Coordinator
 	Process(ctx *actor.Context)
-	RequestFixture(msg *messages.CoordinatorMessage)
-	PlaceComponent(msg *messages.CoordinatorMessage)
-	AttachComponent(msg *messages.CoordinatorMessage)
+	FixtureRequested(msg *messages.CoordinatorMessage)
+	ComponentPlaced(msg *messages.CoordinatorMessage)
+	ComponentAttached(msg *messages.CoordinatorMessage)
 }
