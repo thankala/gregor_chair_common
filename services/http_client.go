@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 type HttpClient struct {
@@ -27,5 +28,6 @@ func (c *HttpClient) Post(relativeUrl string, body interface{}) (*http.Response,
 		return nil, err
 	}
 	result, err := http.Post(c.baseUrl+relativeUrl, "application/json", bytes.NewBuffer(jsonData))
+	time.Sleep(500)
 	return result, err
 }
