@@ -21,7 +21,9 @@ func (c *HttpClient) Get(relativeUrl string) (*http.Response, error) {
 
 func (c *HttpClient) Post(relativeUrl string, body interface{}) (*http.Response, error) {
 	if body == nil {
-		return http.Post(c.baseUrl+relativeUrl, "application/json", nil)
+		result_without_body, err := http.Post(c.baseUrl+relativeUrl, "application/json", nil)
+		time.Sleep(500)
+		return result_without_body, err
 	}
 	jsonData, err := json.Marshal(body)
 	if err != nil {
