@@ -1,6 +1,6 @@
 module github.com/thankala/gregor_chair_common
 
-go 1.22.4
+go 1.24
 
 require (
 	github.com/anthdm/hollywood v1.0.3
