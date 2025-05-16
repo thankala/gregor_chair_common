@@ -7,7 +7,7 @@ import (
 )
 
 type FixtureState struct {
-	Owner     enums.AssemblyTask
+	Owner     enums.Task
 	Component enums.Component
 }
 

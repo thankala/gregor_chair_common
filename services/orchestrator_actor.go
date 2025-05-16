@@ -3,26 +3,26 @@ package services
 import (
 	"github.com/anthdm/hollywood/actor"
 	"github.com/thankala/gregor_chair_common/enums"
+	"github.com/thankala/gregor_chair_common/events"
 	"github.com/thankala/gregor_chair_common/interfaces"
-	"github.com/thankala/gregor_chair_common/messages"
 )
 
-type CoordinatorActor[T any] struct {
-	coordinator enums.Coordinator
-	instance    interfaces.Coordinator[T]
-	server      interfaces.Server
-	serverPid   *actor.PID
-	started     bool
-	stopCh      chan struct{}
+type OrchestratorActor[T any] struct {
+	orchestrator enums.Task
+	instance     interfaces.Orchestrator[T]
+	server       interfaces.Server
+	serverPid    *actor.PID
+	started      bool
+	stopCh       chan struct{}
 }
 
-func NewCoordinatorActor[T any](actorInstance interfaces.Coordinator[T], server interfaces.Server) actor.Producer {
+func NewOrchestratorActor[T any](actorInstance interfaces.Orchestrator[T], server interfaces.Server) actor.Producer {
 	return func() actor.Receiver {
-		return &CoordinatorActor[T]{coordinator: actorInstance.Coordinator(), instance: actorInstance, server: server}
+		return &OrchestratorActor[T]{orchestrator: actorInstance.Orchestrator(), instance: actorInstance, server: server}
 	}
 }
 
-func (a *CoordinatorActor[T]) Receive(ctx *actor.Context) {
+func (a *OrchestratorActor[T]) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case actor.Initialized:
 		if value, ok := a.instance.(interfaces.Initializable); ok {
@@ -39,14 +39,16 @@ func (a *CoordinatorActor[T]) Receive(ctx *actor.Context) {
 		if a.stopCh != nil {
 			close(a.stopCh)
 		}
-	case *messages.AssemblyTaskMessage:
+	case *events.AssemblyTaskEvent:
+		// time.Sleep(time.Millisecond * 10)
 		if a.server != nil {
 			ctx.Send(a.serverPid, msg)
 		} else {
 			ctx.Send(ctx.Parent(), msg)
 		}
-	case *messages.CoordinatorMessage:
-		if msg.Destination == a.coordinator.String() {
+	case *events.OrchestratorEvent:
+		// time.Sleep(time.Millisecond * 10)
+		if msg.Destination == a.orchestrator {
 			switch msg.Type {
 			case enums.ComponentPlaced:
 				a.instance.ComponentPlaced(msg)

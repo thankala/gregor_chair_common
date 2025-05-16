@@ -1,9 +1,9 @@
 package enums
 
-type Position int
+type Position string
 
 const (
-	NonePosition Position = iota
-	Position1
-	Position2
+	NonePosition Position = "NonePosition"
+	Position1    Position = "Position1"
+	Position2    Position = "Position2"
 )

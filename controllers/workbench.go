@@ -3,13 +3,14 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
+
 	"github.com/thankala/gregor_chair_common/configuration"
 	"github.com/thankala/gregor_chair_common/enums"
 	"github.com/thankala/gregor_chair_common/interfaces"
 	"github.com/thankala/gregor_chair_common/models"
 	"github.com/thankala/gregor_chair_common/states"
 	"github.com/thankala/gregor_chair_common/utilities"
-	"slices"
 )
 
 type WorkbenchController struct {
@@ -35,7 +36,7 @@ func NewWorkbenchController(storer interfaces.Storer, httpClient interfaces.Http
 
 // Fixture Management
 
-func (c *WorkbenchController) String() string {
+func (c *WorkbenchController) Key() enums.Workbench {
 	return c.configuration.Key
 }
 
@@ -76,7 +77,7 @@ func (c *WorkbenchController) CanRotate() bool {
 	return c.canRotateInternal(state.Initialized, fixtures)
 }
 
-func (c *WorkbenchController) SetFixtureOwner(task enums.AssemblyTask, caller string, fixture enums.Fixture) {
+func (c *WorkbenchController) SetFixtureOwner(task enums.Task, caller string, fixture enums.Fixture) {
 	state := c.loadState()
 	fixtureConfiguration := c.getFixtureConfiguration(caller, fixture)
 	fixtureState := state.Fixtures[fixtureConfiguration.Fixture]
@@ -99,7 +100,7 @@ func (c *WorkbenchController) RotateFixtures() []models.FixtureContent {
 		}
 	}
 
-	fixture1State := states.FixtureState{Owner: enums.NoneAssemblyTask, Component: enums.NoneComponent}
+	fixture1State := states.FixtureState{Owner: enums.NoneTask, Component: enums.NoneComponent}
 	fixture2State := state.Fixtures[fixtures[0].Fixture]
 	fixture3State := state.Fixtures[fixtures[1].Fixture]
 
@@ -117,7 +118,7 @@ func (c *WorkbenchController) RotateFixtures() []models.FixtureContent {
 
 // Item Management
 
-func (c *WorkbenchController) GetItem(task enums.AssemblyTask, caller string, fixture enums.Fixture) enums.Component {
+func (c *WorkbenchController) GetItem(task enums.Task, caller string, fixture enums.Fixture) enums.Component {
 	state := c.loadState()
 	fixtureConfiguration := c.getFixtureConfiguration(caller, fixture)
 	fixtureState := state.Fixtures[fixtureConfiguration.Fixture]
@@ -142,7 +143,7 @@ func (c *WorkbenchController) GetItem(task enums.AssemblyTask, caller string, fi
 	return component
 }
 
-func (c *WorkbenchController) SetItem(task enums.AssemblyTask, caller string, fixture enums.Fixture, component enums.Component) {
+func (c *WorkbenchController) SetItem(task enums.Task, caller string, fixture enums.Fixture, component enums.Component) {
 	state := c.loadState()
 	fixtureConfiguration := c.getFixtureConfiguration(caller, fixture)
 	fixtureState := state.Fixtures[fixtureConfiguration.Fixture]
@@ -165,13 +166,13 @@ func (c *WorkbenchController) SetItem(task enums.AssemblyTask, caller string, fi
 	c.storeState(state)
 }
 
-func (c *WorkbenchController) AttachItem(task enums.AssemblyTask, caller string, fixture enums.Fixture, component enums.Component) {
+func (c *WorkbenchController) AttachItem(task enums.Task, caller string, fixture enums.Fixture, component enums.Component) {
 	state := c.loadState()
 	fixtureConfiguration := c.getFixtureConfiguration(caller, fixture)
 	fixtureState := state.Fixtures[fixtureConfiguration.Fixture]
 
 	if fixtureState.Owner != task {
-		panic(fmt.Sprintf("Fixture \"%s\" is not owned by task \"%s\". It is owned by \"%s\"", fixtureConfiguration.Fixture.String(), task, fixtureState.Owner.String()))
+		panic(fmt.Sprintf("Fixture \"%s\" is not owned by task \"%s\". It is owned by \"%s\"", fixtureConfiguration.Fixture.String(), task, fixtureState.Owner))
 	}
 
 	// TODO: Add machine integration
@@ -259,7 +260,7 @@ func (c *WorkbenchController) resetState() {
 	state.Requests = make(map[enums.Fixture]utilities.Queue[models.Request])
 	for _, fixtureConfiguration := range c.configuration.Fixtures {
 		state.Fixtures[fixtureConfiguration.Fixture] = states.FixtureState{
-			Owner:     enums.NoneAssemblyTask,
+			Owner:     enums.NoneTask,
 			Component: enums.NoneComponent,
 		}
 		state.Requests[fixtureConfiguration.Fixture] = []models.Request{}
@@ -276,7 +277,8 @@ func (c *WorkbenchController) resetLEDs() {
 
 func (c *WorkbenchController) loadState() states.WorkbenchState {
 	var state states.WorkbenchState
-	v, err := c.storer.Load(c.configuration.Key)
+	// time.Sleep(1 * time.Second)
+	v, err := c.storer.Load(c.configuration.Key.String())
 	if err != nil {
 		panic(err)
 	}
@@ -291,7 +293,7 @@ func (c *WorkbenchController) storeState(state states.WorkbenchState) {
 	if err != nil {
 		panic(err)
 	}
-	if err := c.storer.Store(c.configuration.Key, v); err != nil {
+	if err := c.storer.Store(c.configuration.Key.String(), v); err != nil {
 		panic(err)
 	}
 }

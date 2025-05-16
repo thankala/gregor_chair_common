@@ -12,14 +12,14 @@ func NewFixtureConfiguration(fixture enums.Fixture, subscribers []string) *Fixtu
 }
 
 type WorkbenchControllerConfiguration struct {
-	Key          string
+	Key          enums.Workbench
 	Fixtures     []FixtureConfiguration
 	StateMapping map[enums.Fixture]map[enums.Stage]string
 }
 
 type WorkbenchControllerConfigurationFunc func(configuration *WorkbenchControllerConfiguration)
 
-func WithWorkbenchKey(key string) WorkbenchControllerConfigurationFunc {
+func WithWorkbenchKey(key enums.Workbench) WorkbenchControllerConfigurationFunc {
 	return func(configuration *WorkbenchControllerConfiguration) {
 		configuration.Key = key
 	}

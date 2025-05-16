@@ -2,14 +2,15 @@ package services
 
 import (
 	"fmt"
+
 	"github.com/anthdm/hollywood/actor"
 	"github.com/thankala/gregor_chair_common/enums"
+	"github.com/thankala/gregor_chair_common/events"
 	"github.com/thankala/gregor_chair_common/interfaces"
-	"github.com/thankala/gregor_chair_common/messages"
 )
 
 type AssemblyTaskActor[T any] struct {
-	task      enums.AssemblyTask
+	task      enums.Task
 	actor     interfaces.AssemblyTask[T]
 	server    interfaces.Server
 	serverPid *actor.PID
@@ -23,10 +24,10 @@ func NewAssemblyTaskActor[T any](actorInstance interfaces.AssemblyTask[T], serve
 }
 
 func (a *AssemblyTaskActor[T]) Receive(ctx *actor.Context) {
-	switch msg := ctx.Message().(type) {
+	switch event := ctx.Message().(type) {
 	case actor.Initialized:
 		if value, ok := a.actor.(interfaces.Initializable); ok {
-			value.OnInitialized(msg, ctx)
+			value.OnInitialized(event, ctx)
 		}
 	case actor.Started:
 		if a.server != nil {
@@ -37,34 +38,35 @@ func (a *AssemblyTaskActor[T]) Receive(ctx *actor.Context) {
 		if a.stopCh != nil {
 			close(a.stopCh)
 		}
-	case *messages.AssemblyTaskMessage:
-		if msg.Task == a.task {
-			a.Process(ctx, msg)
+	case *events.AssemblyTaskEvent:
+		if event.Destination == a.task {
+			a.Process(ctx, event)
 			return
 		}
 		if a.server != nil {
-			ctx.Send(a.serverPid, msg)
+			ctx.Send(a.serverPid, event)
 		} else {
-			ctx.Send(ctx.Parent(), msg)
+			ctx.Send(ctx.Parent(), event)
 		}
-	case *messages.CoordinatorMessage:
+	case *events.OrchestratorEvent:
 		if a.server != nil {
-			ctx.Send(a.serverPid, msg)
+			ctx.Send(a.serverPid, event)
 		} else {
-			ctx.Send(ctx.Parent(), msg)
+			ctx.Send(ctx.Parent(), event)
 		}
 	default:
 		panic(fmt.Sprintf("Actor \"%s\" received unknown message: %v", a.task, ctx.Message()))
 	}
 }
 
-func (a *AssemblyTaskActor[T]) Process(ctx *actor.Context, msg *messages.AssemblyTaskMessage) {
-	if a.task != msg.Task {
-		panic(fmt.Sprintf("Actor \"%s\" received message for instance \"%s\"", a.task, msg.Task))
+func (a *AssemblyTaskActor[T]) Process(ctx *actor.Context, event *events.AssemblyTaskEvent) {
+	if a.task != event.Destination {
+		panic(fmt.Sprintf("Actor \"%s\" received message for instance \"%s\"", a.task, event.Source))
 	}
-	if step, ok := a.actor.Steps()[msg.Step]; ok {
-		step(msg, ctx)
+	if step, ok := a.actor.Steps()[event.Step]; ok {
+		// logger.Get().Info("Processing event", event)
+		step(event, ctx)
 	} else {
-		panic(fmt.Sprintf("Actor \"%s\" received unknown step \"%d\"", a.task, msg.Step))
+		panic(fmt.Sprintf("Actor \"%s\" received unknown step \"%d\"", a.task, event.Step))
 	}
 }

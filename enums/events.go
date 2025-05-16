@@ -1,9 +1,9 @@
 package enums
 
-type Event int
+type Event string
 
 const (
-	NoneEvent Event = iota
-	AssemblyTaskEvent
-	CoordinatorEvent
+	NoneEvent         Event = "NoneEvent"
+	AssemblyTaskEvent Event = "AssemblyTaskEvent"
+	OrchestratorEvent Event = "OrchestratorEvent"
 )

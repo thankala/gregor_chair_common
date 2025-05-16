@@ -3,14 +3,15 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"slices"
+	"time"
+
 	"github.com/thankala/gregor_chair_common/configuration"
 	"github.com/thankala/gregor_chair_common/enums"
 	"github.com/thankala/gregor_chair_common/interfaces"
 	"github.com/thankala/gregor_chair_common/logger"
 	"github.com/thankala/gregor_chair_common/states"
-	"math/rand"
-	"slices"
-	"time"
 )
 
 type RobotController struct {
@@ -95,7 +96,6 @@ func (c *RobotController) PickAndPlace() {
 		}
 	}
 	logger.Get().Info("PickAndPlace executed", "Robot", c.configuration.Key)
-	return
 }
 
 func (c *RobotController) PickAndInsert() {
@@ -105,7 +105,6 @@ func (c *RobotController) PickAndInsert() {
 		}
 	}
 	logger.Get().Info("PickAndInsert executed", "Robot", c.configuration.Key)
-	return
 }
 
 func (c *RobotController) PickAndFlipAndPress() {
@@ -115,7 +114,6 @@ func (c *RobotController) PickAndFlipAndPress() {
 		}
 	}
 	logger.Get().Info("PickAndFlipAndPress executed", "Robot", c.configuration.Key)
-	return
 }
 
 func (c *RobotController) ScrewPickAndFasten() {
@@ -125,7 +123,6 @@ func (c *RobotController) ScrewPickAndFasten() {
 		}
 	}
 	logger.Get().Info("ScrewPickAndFasten executed", "Robot", c.configuration.Key)
-	return
 }
 
 // Pickup items
@@ -206,37 +203,37 @@ func (c *RobotController) WaitUntilFree() {
 		duration := time.Duration(rand.Intn(100))
 		time.Sleep(duration * time.Second)
 
-		if c.GetCurrentTask() == enums.NoneAssemblyTask {
+		if c.GetCurrentTask() == enums.NoneTask {
 			break
 		}
 	}
 }
 
 func (c *RobotController) IsBusy() bool {
-	return c.GetCurrentTask() != enums.NoneAssemblyTask
+	return c.GetCurrentTask() != enums.NoneTask
 }
 
-func (c *RobotController) ValidateCurrentTask(task enums.AssemblyTask) {
+func (c *RobotController) ValidateCurrentTask(task enums.Task) {
 	if c.GetCurrentTask() != task {
-		panic(fmt.Sprintf("Robot %s is not assigned to task %s", c.configuration.Key, task.String()))
+		panic(fmt.Sprintf("Robot %s is not assigned to task %s", c.configuration.Key, task))
 	}
 }
 
-func (c *RobotController) GetCurrentTask() enums.AssemblyTask {
+func (c *RobotController) GetCurrentTask() enums.Task {
 	state := c.loadState()
 	return state.Task
 }
 
-func (c *RobotController) SetCurrentTask(task enums.AssemblyTask) error {
+func (c *RobotController) SetCurrentTask(task enums.Task) error {
 	res := c.acquireLock(task)
 	if !res {
 		return fmt.Errorf("robot %s is busy", c.configuration.Key)
 	}
 
 	state := c.loadState()
-	if state.Task != enums.NoneAssemblyTask {
+	if state.Task != enums.NoneTask {
 		//c.WaitUntilFree()
-		return fmt.Errorf("robot %s is already assigned to task %s", c.configuration.Key, state.Task.String())
+		return fmt.Errorf("robot %s is already assigned to task %s", c.configuration.Key, state.Task)
 	}
 	state.Task = task
 	c.storeState(state)
@@ -246,14 +243,14 @@ func (c *RobotController) SetCurrentTask(task enums.AssemblyTask) error {
 
 func (c *RobotController) ClearCurrentTask() {
 	state := c.loadState()
-	state.Task = enums.NoneAssemblyTask
+	state.Task = enums.NoneTask
 	c.storeState(state)
 	c.releaseLock()
 }
 
 // State Management
-func (c *RobotController) acquireLock(task enums.AssemblyTask) bool {
-	res, err := c.storer.AcquireLock(fmt.Sprintf("%s-lock", c.configuration.Key), task.String())
+func (c *RobotController) acquireLock(task enums.Task) bool {
+	res, err := c.storer.AcquireLock(fmt.Sprintf("%s-lock", c.configuration.Key), string(task))
 	if err != nil {
 		panic("Failed to acquire lock")
 	}
@@ -272,7 +269,7 @@ func (c *RobotController) resetState() {
 		Position: enums.NonePosition,
 		Facing:   enums.NoneWorkbench.String(),
 		Item:     enums.NoneComponent,
-		Task:     enums.NoneAssemblyTask,
+		Task:     enums.NoneTask,
 	})
 }
 

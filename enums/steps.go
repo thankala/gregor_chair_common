@@ -3,7 +3,8 @@ package enums
 type Step int
 
 const (
-	Step1 Step = iota
+	NoneStep Step = iota
+	Step1
 	Step2
 	Step3
 	Step4
