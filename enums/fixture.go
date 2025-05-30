@@ -25,21 +25,3 @@ func (f Fixture) StringShort() string {
 		return "NoneFixture"
 	}
 }
-
-//
-// type Fixture int
-
-// const (
-// 	NoneFixture Fixture = iota
-// 	Fixture1
-// 	Fixture2
-// 	Fixture3
-// )
-
-// func (f Fixture) String() string {
-// 	return [...]string{"NoneFixture", "Fixture1", "Fixture2", "Fixture3"}[f]
-// }
-
-// func (f Fixture) StringShort() string {
-// 	return [...]string{"NoneFixture", "F1", "F2", "F3"}[f]
-// }

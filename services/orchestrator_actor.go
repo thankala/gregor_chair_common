@@ -40,14 +40,12 @@ func (a *OrchestratorActor[T]) Receive(ctx *actor.Context) {
 			close(a.stopCh)
 		}
 	case *events.AssemblyTaskEvent:
-		// time.Sleep(time.Millisecond * 10)
 		if a.server != nil {
 			ctx.Send(a.serverPid, msg)
 		} else {
 			ctx.Send(ctx.Parent(), msg)
 		}
 	case *events.OrchestratorEvent:
-		// time.Sleep(time.Millisecond * 10)
 		if msg.Destination == a.orchestrator {
 			switch msg.Type {
 			case enums.ComponentPlaced:
