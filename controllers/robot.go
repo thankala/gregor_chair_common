@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -58,7 +59,7 @@ func (c *RobotController) MoveToStorage(storage enums.Storage) {
 		}
 	}
 	c.storeState(state)
-	logger.Get().Info("Robot moved to storage", "Robot", c.configuration.Key, "Storage", storage.String())
+	logger.Get().Info("Robot moved to storage", "Robot", c.configuration.Key, "Storage", storage.String(), "Task", c.GetCurrentTask())
 }
 
 func (c *RobotController) MoveToWorkbench(workbench enums.Workbench) {
@@ -72,7 +73,7 @@ func (c *RobotController) MoveToWorkbench(workbench enums.Workbench) {
 		}
 	}
 	c.storeState(state)
-	logger.Get().Info("Robot moved to workbench", "Robot", c.configuration.Key, "Workbench", workbench.String())
+	logger.Get().Info("Robot moved to workbench", "Robot", c.configuration.Key, "Workbench", workbench.String(), "Task", c.GetCurrentTask())
 }
 
 func (c *RobotController) MoveToConveyorBelt(conveyorBelt enums.ConveyorBelt) {
@@ -86,43 +87,52 @@ func (c *RobotController) MoveToConveyorBelt(conveyorBelt enums.ConveyorBelt) {
 		}
 	}
 	c.storeState(state)
-	logger.Get().Info("Robot moved to conveyor belt", "Robot", c.configuration.Key, "Conveyor Belt", conveyorBelt.String())
+	logger.Get().Info("Robot moved to conveyor belt", "Robot", c.configuration.Key, "Conveyor Belt", conveyorBelt.String(), "Task", c.GetCurrentTask())
 }
 
-func (c *RobotController) PickAndPlace() {
+func (c *RobotController) Pick() {
 	if c.httpClient != nil {
-		if _, err := c.httpClient.Post("/composite/pick_and_place", nil); err != nil {
+		if _, err := c.httpClient.Post("/primitive/grip", nil); err != nil {
 			panic(err)
 		}
 	}
-	logger.Get().Info("PickAndPlace executed", "Robot", c.configuration.Key)
+	logger.Get().Info("Grip executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
 }
 
-func (c *RobotController) PickAndInsert() {
+func (c *RobotController) Place() {
 	if c.httpClient != nil {
-		if _, err := c.httpClient.Post("/composite/pick_and_insert", nil); err != nil {
+		if _, err := c.httpClient.Post("/primitive/ungrip", nil); err != nil {
 			panic(err)
 		}
 	}
-	logger.Get().Info("PickAndInsert executed", "Robot", c.configuration.Key)
+	logger.Get().Info("Ungrip executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
 }
 
-func (c *RobotController) PickAndFlipAndPress() {
+func (c *RobotController) Screw() {
 	if c.httpClient != nil {
-		if _, err := c.httpClient.Post("/composite/pick_and_flip_and_press", nil); err != nil {
+		if _, err := c.httpClient.Post("/composite/screw", nil); err != nil {
 			panic(err)
 		}
 	}
-	logger.Get().Info("PickAndFlipAndPress executed", "Robot", c.configuration.Key)
+	logger.Get().Info("Screw executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
 }
 
-func (c *RobotController) ScrewPickAndFasten() {
+func (c *RobotController) Flip() {
 	if c.httpClient != nil {
-		if _, err := c.httpClient.Post("/composite/screw_pick_and_fasten", nil); err != nil {
+		if _, err := c.httpClient.Post("/composite/flip", nil); err != nil {
 			panic(err)
 		}
 	}
-	logger.Get().Info("ScrewPickAndFasten executed", "Robot", c.configuration.Key)
+	logger.Get().Info("Flip executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
+}
+
+func (c *RobotController) Press() {
+	if c.httpClient != nil {
+		if _, err := c.httpClient.Post("/composite/press", nil); err != nil {
+			panic(err)
+		}
+	}
+	logger.Get().Info("Press executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
 }
 
 // Pickup items
@@ -134,14 +144,25 @@ func (c *RobotController) PickupItemFromWorkbench(item enums.Component, workbenc
 		panic(fmt.Sprintf("Robot %s is facing %s and not specified coordinator_1 %s", c.configuration.Key, state.Facing, workbench.String()))
 	}
 
+	body := map[string]bool{
+		"enable_grip":    true,
+		"enable_control": true,
+	}
+
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		panic(err)
+	}
+
 	if c.httpClient != nil {
-		if _, err := c.httpClient.Post("/primitive/pick", nil); err != nil {
+		if _, err := c.httpClient.Post("/primitive/grip", bytes.NewBuffer(jsonData)); err != nil {
 			panic(err)
 		}
 	}
+
 	state.Item = item
 	c.storeState(state)
-	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", item, "From", workbench.String())
+	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", item.String(), "From", workbench.String(), "Task", c.GetCurrentTask())
 }
 
 func (c *RobotController) PickupItemFromStorage(storage enums.Storage) {
@@ -151,15 +172,25 @@ func (c *RobotController) PickupItemFromStorage(storage enums.Storage) {
 		panic(fmt.Sprintf("Robot %s is facing %s and not specified storage %s", c.configuration.Key, state.Facing, storage.String()))
 	}
 
+	body := map[string]bool{
+		"enable_grip":    true,
+		"enable_control": true,
+	}
+
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		panic(err)
+	}
+
 	if c.httpClient != nil {
-		if _, err := c.httpClient.Post("/primitive/pick", nil); err != nil {
+		if _, err := c.httpClient.Post("/primitive/grip", bytes.NewBuffer(jsonData)); err != nil {
 			panic(err)
 		}
 	}
 
 	state.Item = storageConfiguration.Component
 	c.storeState(state)
-	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", storageConfiguration.Component, "From", storage.String())
+	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", storageConfiguration.Component.String(), "From", storage.String(), "Task", c.GetCurrentTask())
 }
 
 func (c *RobotController) PickupItemFromConveyorBelt(conveyorBelt enums.ConveyorBelt) {
@@ -169,30 +200,40 @@ func (c *RobotController) PickupItemFromConveyorBelt(conveyorBelt enums.Conveyor
 		panic(fmt.Sprintf("Robot %s is facing %s and not specified belt %s", c.configuration.Key, state.Facing, conveyorBelt.String()))
 	}
 
+	body := map[string]bool{
+		"enable_grip":    true,
+		"enable_control": true,
+	}
+
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		panic(err)
+	}
+
 	if c.httpClient != nil {
-		if _, err := c.httpClient.Post("/primitive/pick", nil); err != nil {
+		if _, err := c.httpClient.Post("/primitive/grip", bytes.NewBuffer(jsonData)); err != nil {
 			panic(err)
 		}
 	}
+
 	state.Item = conveyorBeltConfiguration.Component
 	c.storeState(state)
-	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", conveyorBeltConfiguration.Component, "From", conveyorBelt.String())
+	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", conveyorBeltConfiguration.Component.String(), "From", conveyorBelt.String(), "Task", c.GetCurrentTask())
 }
 
 // Pickup and deposit items
 
-func (c *RobotController) PlaceItem() enums.Component {
+func (c *RobotController) ReleaseItem() enums.Component {
 	state := c.loadState()
 	item := state.Item
-	if c.httpClient != nil {
-		if _, err := c.httpClient.Post("/primitive/place", nil); err != nil {
-			panic(err)
-		}
-	}
+	logger.Get().Info("Robot released item", "Robot", c.configuration.Key, "Item", item.String(), "Task", c.GetCurrentTask())
+	// if c.httpClient != nil {
+	// 	if _, err := c.httpClient.Post("/composite/place", nil); err != nil {
+	// 		panic(err)
+	// 	}
+	// }
 	state.Item = enums.NoneComponent
 	c.storeState(state)
-	logger.Get().Info("Robot released item", "Robot", c.configuration.Key, "Item", item)
-	//fmt.Printf("Robot \"%s\" released item \"%v\"\n", c.configuration.Key, item)
 	return item
 }
 
@@ -225,7 +266,11 @@ func (c *RobotController) GetCurrentTask() enums.Task {
 }
 
 func (c *RobotController) SetCurrentTask(task enums.Task) error {
-	res := c.acquireLock(task)
+	res, err := c.acquireLock(task)
+
+	if err != nil {
+		return err
+	}
 	if !res {
 		return fmt.Errorf("robot %s is busy", c.configuration.Key)
 	}
@@ -237,24 +282,25 @@ func (c *RobotController) SetCurrentTask(task enums.Task) error {
 	}
 	state.Task = task
 	c.storeState(state)
-
+	logger.Get().Info("Robot started task", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
 	return nil
 }
 
 func (c *RobotController) ClearCurrentTask() {
 	state := c.loadState()
+	logger.Get().Info("Robot ended task", "Robot", c.configuration.Key, "Task", state.Task.String())
 	state.Task = enums.NoneTask
 	c.storeState(state)
 	c.releaseLock()
 }
 
 // State Management
-func (c *RobotController) acquireLock(task enums.Task) bool {
+func (c *RobotController) acquireLock(task enums.Task) (bool, error) {
 	res, err := c.storer.AcquireLock(fmt.Sprintf("%s-lock", c.configuration.Key), string(task))
 	if err != nil {
-		panic("Failed to acquire lock")
+		return false, fmt.Errorf("failed to acquire lock: %s", err)
 	}
-	return res
+	return res, nil
 }
 
 func (c *RobotController) releaseLock() {
@@ -296,7 +342,6 @@ func (c *RobotController) storeState(state states.RobotState) {
 }
 
 // Configuration Management
-
 func (c *RobotController) Key() string {
 	return c.configuration.Key
 }
@@ -316,7 +361,7 @@ func (c *RobotController) getWorkbenchConfiguration(workbench enums.Workbench) c
 		return workbenchConfiguration.Workbench == workbench
 	})
 	if workbenchIndex == -1 {
-		panic("Invalid coordinator_1")
+		panic("Invalid workbench")
 	}
 	return c.configuration.Workbenches[workbenchIndex]
 }

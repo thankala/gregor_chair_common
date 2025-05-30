@@ -8,6 +8,7 @@ import (
 	"github.com/thankala/gregor_chair_common/configuration"
 	"github.com/thankala/gregor_chair_common/enums"
 	"github.com/thankala/gregor_chair_common/interfaces"
+	"github.com/thankala/gregor_chair_common/logger"
 	"github.com/thankala/gregor_chair_common/models"
 	"github.com/thankala/gregor_chair_common/states"
 	"github.com/thankala/gregor_chair_common/utilities"
@@ -57,11 +58,11 @@ func (c *WorkbenchController) canRotateInternal(initialized bool, fixtures []mod
 	// If the coordinator_1 3 fixtures, it can rotate
 	has3Fixtures := len(fixtures) == 3
 
-	// If the first fixture is at stage BaseAttached and the other fixtures are at stage Initial, it can rotate
-	isInitialConfiguration := !initialized && fixtures[0].Component.Stage() == enums.BaseAttached && fixtures[1].Component.Stage() == enums.Initial && fixtures[2].Component.Stage() == enums.Initial
+	// If the first fixture is at stage LegsAttached and the other fixtures are at stage Initial, it can rotate
+	isInitialConfiguration := !initialized && fixtures[0].Component.Stage() == enums.LegsAttached && fixtures[1].Component.Stage() == enums.Initial && fixtures[2].Component.Stage() == enums.Initial
 
-	// Or if the first fixture is at stage BaseAttached ant the second fixture is at stage ScrewsAttached and the third fixture is at stage Initial, it can rotate
-	isEveryConfiguration := initialized && fixtures[0].Component.Stage() == enums.BaseAttached && fixtures[1].Component.Stage() == enums.ScrewsAttached && fixtures[2].Component.Stage() == enums.Initial
+	// Or if the first fixture is at stage LegsAttached ant the second fixture is at stage SeatAttached and the third fixture is at stage Initial, it can rotate
+	isEveryConfiguration := initialized && fixtures[0].Component.Stage() == enums.LegsAttached && fixtures[1].Component.Stage() == enums.SeatAttached && fixtures[2].Component.Stage() == enums.Initial
 
 	return has3Fixtures && (isInitialConfiguration || isEveryConfiguration)
 }
@@ -93,12 +94,14 @@ func (c *WorkbenchController) RotateFixtures() []models.FixtureContent {
 		return nil
 	}
 
+	logger.Get().Info("Rotating workbench", "Workbench", c.configuration.Key)
 	// TODO: Add machine integration
 	if c.httpClient != nil {
 		if _, err := c.httpClient.Post("/rotate", nil); err != nil {
 			panic(err)
 		}
 	}
+	logger.Get().Info("Workbench rotated", "Workbench", c.configuration.Key)
 
 	fixture1State := states.FixtureState{Owner: enums.NoneTask, Component: enums.NoneComponent}
 	fixture2State := state.Fixtures[fixtures[0].Fixture]
@@ -151,11 +154,10 @@ func (c *WorkbenchController) SetItem(task enums.Task, caller string, fixture en
 	if fixtureState.Owner != task {
 		panic(fmt.Sprintf("Fixture \"%s\" is not owned by task \"%s\"", fixtureConfiguration.Fixture.String(), task))
 	}
-
 	// TODO: Add machine integration
 	if c.httpClient != nil {
 		if _, err := c.httpClient.Post("/fixtures/"+fixture.StringShort(), map[string]interface{}{
-			"state": "PENDING",
+			"state": "ASSEMBLING",
 		}); err != nil {
 			panic(err)
 		}
@@ -178,7 +180,7 @@ func (c *WorkbenchController) AttachItem(task enums.Task, caller string, fixture
 	// TODO: Add machine integration
 	if c.httpClient != nil {
 		if _, err := c.httpClient.Post("/fixtures/"+fixture.StringShort(), map[string]interface{}{
-			"state": "ASSEMBLING",
+			"state": "PENDING",
 		}); err != nil {
 			panic(err)
 		}
@@ -277,7 +279,6 @@ func (c *WorkbenchController) resetLEDs() {
 
 func (c *WorkbenchController) loadState() states.WorkbenchState {
 	var state states.WorkbenchState
-	// time.Sleep(1 * time.Second)
 	v, err := c.storer.Load(c.configuration.Key.String())
 	if err != nil {
 		panic(err)
