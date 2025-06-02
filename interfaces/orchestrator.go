@@ -8,8 +8,6 @@ import (
 
 type Orchestrator[T any] interface {
 	Orchestrator() enums.Task
-	Process(ctx *actor.Context)
-	FixtureRequested(event *events.OrchestratorEvent)
-	ComponentPlaced(event *events.OrchestratorEvent)
-	ComponentAttached(event *events.OrchestratorEvent)
+	Process(ctx *actor.Context, event *events.OrchestratorEvent)
+	StartAssembly(ctx *actor.Context, event *events.OrchestratorEvent)
 }

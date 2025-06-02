@@ -36,8 +36,6 @@ func (c *Component) String() string {
 		return "SeatPlate"
 	case SeatAndSeatPlate:
 		return "SeatAndSeatPlate"
-	// case Screws:
-	// 	return "Screws"
 	case Back:
 		return "Back"
 	case LeftArm:

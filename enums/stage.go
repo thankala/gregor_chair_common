@@ -14,7 +14,7 @@ const (
 	BackAttached      = Stage(NoneComponent | Base | Legs | Castors | Lift | Seat | SeatPlate | Back)
 	LeftArmAttached   = Stage(NoneComponent | Base | Legs | Castors | Lift | Seat | SeatPlate | Back | LeftArm)
 	RightArmAttached  = Stage(NoneComponent | Base | Legs | Castors | Lift | Seat | SeatPlate | Back | RightArm)
-	Completed         = Stage(NoneComponent | Base | Legs | Castors | Lift | Seat | SeatPlate | Back | LeftArm | RightArm)
+	Chair             = Stage(NoneComponent | Base | Legs | Castors | Lift | Seat | SeatPlate | Back | LeftArm | RightArm)
 )
 
 func (s Stage) String() string {
@@ -35,8 +35,10 @@ func (s Stage) String() string {
 		return "BackAttached"
 	case LeftArmAttached:
 		return "LeftArmAttached"
-	case Completed:
-		return "Completed"
+	case RightArmAttached:
+		return "RightArmAttached"
+	case Chair:
+		return "Chair"
 	default:
 		return "Unknown"
 	}

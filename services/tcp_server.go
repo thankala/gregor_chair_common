@@ -14,7 +14,6 @@ import (
 // TCPServer is a service that listens for incoming TCP connections
 type TCPServer struct {
 	listenAddr string
-	stopCh     chan struct{}
 }
 
 func NewTCPServer(opts ...configuration.TcpOptFunc) *TCPServer {
@@ -24,7 +23,6 @@ func NewTCPServer(opts ...configuration.TcpOptFunc) *TCPServer {
 	}
 	return &TCPServer{
 		listenAddr: options.Address,
-		stopCh:     make(chan struct{}),
 	}
 }
 
@@ -33,9 +31,7 @@ func (s *TCPServer) Receive(ctx *actor.Context) {
 	case actor.Initialized:
 		// Do nothing
 	case actor.Started:
-		go s.Accept(ctx, s.stopCh)
-	case actor.Stopped:
-		close(s.stopCh)
+		s.Accept(ctx)
 	case *events.AssemblyTaskEvent:
 		s.Send(event.Source.String(), event.Destination.String(), enums.AssemblyTaskEvent, event)
 	case *events.OrchestratorEvent:
@@ -45,66 +41,61 @@ func (s *TCPServer) Receive(ctx *actor.Context) {
 	}
 }
 
-func (s *TCPServer) Accept(ctx *actor.Context, stopCh <-chan struct{}) {
+func (s *TCPServer) Accept(ctx *actor.Context) {
 	ln, err := net.Listen("tcp", s.listenAddr)
 	if err != nil {
 		panic(err)
 	}
 	for {
-		select {
-		case <-stopCh:
-			return // Exit the loop if something is received on stopCh
-		default:
-			conn, err := ln.Accept()
-			if err != nil {
-				logger.Get().Error("Unable to accept connection", "Error", err)
-				break
-			}
-			go func(ctx *actor.Context, conn net.Conn) {
-				buf := make([]byte, 1024)
-				for {
-					n, err := conn.Read(buf)
-					if err != nil {
-						//slog.Error("conn read error", "err", err)
-						break
-					}
-					// copy shared buffer, to prevent race conditions.
-					msg := make([]byte, n)
-					copy(msg, buf[:n])
+		conn, err := ln.Accept()
+		if err != nil {
+			logger.Get().Error("Unable to accept connection", "Error", err)
+			break
+		}
+		go func(ctx *actor.Context, conn net.Conn) {
+			buf := make([]byte, 1024)
+			for {
+				n, err := conn.Read(buf)
+				if err != nil {
+					//slog.Error("conn read error", "err", err)
+					break
+				}
+				// copy shared buffer, to prevent race conditions.
+				msg := make([]byte, n)
+				copy(msg, buf[:n])
 
-					var baseEvent events.BaseEvent
-					err = json.Unmarshal(msg, &baseEvent)
-					if err != nil {
-						logger.Get().Error("Unable to serialize base event", "Event", msg, "Error", err)
+				var baseEvent events.BaseEvent
+				err = json.Unmarshal(msg, &baseEvent)
+				if err != nil {
+					logger.Get().Error("Unable to serialize base event", "Event", msg, "Error", err)
+					continue
+				}
+				switch baseEvent.Event {
+				case enums.OrchestratorEvent:
+					var orchestratorEvent events.OrchestratorEvent
+					err = json.Unmarshal(baseEvent.Data, &orchestratorEvent)
+					if err == nil {
+						// send it to the parent actor
+						ctx.Send(ctx.Parent(), &orchestratorEvent)
 						continue
 					}
-					switch baseEvent.Event {
-					case enums.OrchestratorEvent:
-						var orchestratorEvent events.OrchestratorEvent
-						err = json.Unmarshal(baseEvent.Data, &orchestratorEvent)
-						if err == nil {
-							// send it to the parent actor
-							ctx.Send(ctx.Parent(), &orchestratorEvent)
-							continue
-						}
-					case enums.AssemblyTaskEvent:
-						var assemblyTaskEvent events.AssemblyTaskEvent
-						err = json.Unmarshal(baseEvent.Data, &assemblyTaskEvent)
-						if err == nil {
-							// send it to the parent actor
-							ctx.Send(ctx.Parent(), &assemblyTaskEvent)
-							continue
-						}
-					default:
-						logger.Get().Warn("Unable to serialize event", "Event", msg)
+				case enums.AssemblyTaskEvent:
+					var assemblyTaskEvent events.AssemblyTaskEvent
+					err = json.Unmarshal(baseEvent.Data, &assemblyTaskEvent)
+					if err == nil {
+						// send it to the parent actor
+						ctx.Send(ctx.Parent(), &assemblyTaskEvent)
+						continue
 					}
-					err = conn.Close()
-					if err != nil {
-						return
-					}
+				default:
+					logger.Get().Warn("Unable to serialize event", "Event", msg)
 				}
-			}(ctx, conn)
-		}
+				err = conn.Close()
+				if err != nil {
+					return
+				}
+			}
+		}(ctx, conn)
 	}
 }
 

@@ -32,14 +32,20 @@ func NewRobotController(storer interfaces.Storer, httpClient interfaces.HttpClie
 		httpClient:    httpClient,
 		configuration: robotConfiguration,
 	}
-
-	controller.resetState()
-	controller.resetRobot()
-	controller.releaseLock()
 	return controller
 }
 
-func (c *RobotController) resetRobot() {
+func (c *RobotController) ResetState() {
+	c.storeState(states.RobotState{
+		Position: enums.NonePosition,
+		Facing:   enums.NoneWorkbench.String(),
+		Item:     enums.NoneComponent,
+		Task:     enums.NoneTask,
+	})
+	c.releaseLock()
+}
+
+func (c *RobotController) ResetRobot() {
 	if c.httpClient == nil {
 		return
 	}
@@ -222,23 +228,16 @@ func (c *RobotController) PickupItemFromConveyorBelt(conveyorBelt enums.Conveyor
 }
 
 // Pickup and deposit items
-
 func (c *RobotController) ReleaseItem() enums.Component {
 	state := c.loadState()
 	item := state.Item
 	logger.Get().Info("Robot released item", "Robot", c.configuration.Key, "Item", item.String(), "Task", c.GetCurrentTask())
-	// if c.httpClient != nil {
-	// 	if _, err := c.httpClient.Post("/composite/place", nil); err != nil {
-	// 		panic(err)
-	// 	}
-	// }
 	state.Item = enums.NoneComponent
 	c.storeState(state)
 	return item
 }
 
 // Task management
-
 func (c *RobotController) WaitUntilFree() {
 	for {
 		duration := time.Duration(rand.Intn(100))
@@ -310,18 +309,9 @@ func (c *RobotController) releaseLock() {
 	}
 }
 
-func (c *RobotController) resetState() {
-	c.storeState(states.RobotState{
-		Position: enums.NonePosition,
-		Facing:   enums.NoneWorkbench.String(),
-		Item:     enums.NoneComponent,
-		Task:     enums.NoneTask,
-	})
-}
-
 func (c *RobotController) loadState() states.RobotState {
 	var state states.RobotState
-	v, err := c.storer.Load(c.configuration.Key)
+	v, err := c.storer.Load(c.configuration.Key.String())
 	if err != nil {
 		panic(err)
 	}
@@ -336,13 +326,13 @@ func (c *RobotController) storeState(state states.RobotState) {
 	if err != nil {
 		panic(err)
 	}
-	if err := c.storer.Store(c.configuration.Key, v); err != nil {
+	if err := c.storer.Store(c.configuration.Key.String(), v); err != nil {
 		panic(err)
 	}
 }
 
 // Configuration Management
-func (c *RobotController) Key() string {
+func (c *RobotController) Key() enums.Robot {
 	return c.configuration.Key
 }
 

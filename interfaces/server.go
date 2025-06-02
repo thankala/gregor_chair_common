@@ -7,7 +7,7 @@ import (
 
 type Server interface {
 	Send(from string, to string, event enums.Event, msg any)
-	Accept(ctx *actor.Context, stopCh <-chan struct{})
+	Accept(ctx *actor.Context)
 	Receive(ctx *actor.Context)
 	GetProducer() actor.Producer
 }

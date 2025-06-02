@@ -7,10 +7,9 @@ type OrchestratorEvent struct {
 	Destination enums.Task                  `json:"destination"`
 	Type        enums.OrchestratorEventType `json:"type"`
 	Step        enums.Step                  `json:"step"`
-	Caller      string                      `json:"caller"`
+	Caller      enums.Robot                 `json:"caller"`
 	Workbench   enums.Workbench             `json:"workbench"`
 	Fixture     enums.Fixture               `json:"fixture"`
 	Expected    []enums.Stage               `json:"expected"`
-	IsPickup    bool                        `json:"is_pickup"`
 	Component   enums.Component             `json:"component"`
 }

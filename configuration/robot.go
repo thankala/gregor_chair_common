@@ -48,7 +48,7 @@ func NewConveyorBeltConfiguration(conveyorBelt enums.ConveyorBelt, position enum
 }
 
 type RobotControllerConfiguration struct {
-	Key           string
+	Key           enums.Robot
 	Storages      []StorageConfiguration      // Available storages
 	Workbenches   []WorkbenchConfiguration    // Available workbenches
 	ConveyorBelts []ConveyorBeltConfiguration // Available conveyor belts
@@ -56,7 +56,7 @@ type RobotControllerConfiguration struct {
 
 type RobotConfigurationFunc func(configuration *RobotControllerConfiguration)
 
-func WithRobotKey(key string) RobotConfigurationFunc {
+func WithRobotKey(key enums.Robot) RobotConfigurationFunc {
 	return func(configuration *RobotControllerConfiguration) {
 		configuration.Key = key
 	}

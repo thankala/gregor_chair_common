@@ -25,3 +25,16 @@ func (f Fixture) StringShort() string {
 		return "NoneFixture"
 	}
 }
+
+type FixtureState string
+
+const (
+	Free       FixtureState = "FREE"
+	Assembling FixtureState = "ASSEMBLING"
+	Pending    FixtureState = "PENDING"
+	Completed  FixtureState = "COMPLETED"
+)
+
+func (w FixtureState) String() string {
+	return string(w)
+}

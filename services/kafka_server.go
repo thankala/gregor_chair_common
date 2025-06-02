@@ -16,7 +16,6 @@ import (
 type ConfluentKafkaServer struct {
 	reader *kafka.Consumer
 	writer *kafka.Producer
-	stopCh chan struct{}
 }
 
 func NewConfluentKafkaServer(opts ...configuration.KafkaOptionFunc) *ConfluentKafkaServer {
@@ -63,9 +62,7 @@ func (k *ConfluentKafkaServer) Receive(ctx *actor.Context) {
 	case actor.Initialized:
 		// Do nothing
 	case actor.Started:
-		go k.Accept(ctx, k.stopCh)
-	case actor.Stopped:
-		close(k.stopCh)
+		k.Accept(ctx)
 	case *events.AssemblyTaskEvent:
 		k.Send(event.Source.String(), event.Destination.String(), enums.AssemblyTaskEvent, event)
 	case *events.OrchestratorEvent:
@@ -75,43 +72,38 @@ func (k *ConfluentKafkaServer) Receive(ctx *actor.Context) {
 	}
 }
 
-func (k *ConfluentKafkaServer) Accept(ctx *actor.Context, stopCh <-chan struct{}) {
+func (k *ConfluentKafkaServer) Accept(ctx *actor.Context) {
 	for {
-		select {
-		case <-stopCh:
-			return // Exit the loop if something is received on stopCh
+		m, err := k.reader.ReadMessage(time.Hour)
+		if err != nil {
+			logger.Get().Error("Unable to receive events from Kafka", "Error", err)
+			continue
+		}
+		var baseEvent events.BaseEvent
+		err = json.Unmarshal(m.Value, &baseEvent)
+		if err != nil {
+			logger.Get().Error("Unable to serialize event", "Event", m, "Error", err)
+			continue
+		}
+		switch baseEvent.Event {
+		case enums.OrchestratorEvent:
+			var orchestratorEvent events.OrchestratorEvent
+			err = json.Unmarshal(baseEvent.Data, &orchestratorEvent)
+			if err == nil {
+				// Send the message to the parent actor
+				ctx.Send(ctx.Parent(), &orchestratorEvent)
+				continue
+			}
+		case enums.AssemblyTaskEvent:
+			var assemblyTaskEvent events.AssemblyTaskEvent
+			err = json.Unmarshal(baseEvent.Data, &assemblyTaskEvent)
+			if err == nil {
+				// Send the message to the parent actor
+				ctx.Send(ctx.Parent(), &assemblyTaskEvent)
+				continue
+			}
 		default:
-			m, err := k.reader.ReadMessage(time.Hour)
-			if err != nil {
-				logger.Get().Error("Unable to receive events from Kafka", "Error", err)
-				continue
-			}
-			var baseEvent events.BaseEvent
-			err = json.Unmarshal(m.Value, &baseEvent)
-			if err != nil {
-				logger.Get().Error("Unable to serialize event", "Event", m, "Error", err)
-				continue
-			}
-			switch baseEvent.Event {
-			case enums.OrchestratorEvent:
-				var orchestratorEvent events.OrchestratorEvent
-				err = json.Unmarshal(baseEvent.Data, &orchestratorEvent)
-				if err == nil {
-					// Send the message to the parent actor
-					ctx.Send(ctx.Parent(), &orchestratorEvent)
-					continue
-				}
-			case enums.AssemblyTaskEvent:
-				var assemblyTaskEvent events.AssemblyTaskEvent
-				err = json.Unmarshal(baseEvent.Data, &assemblyTaskEvent)
-				if err == nil {
-					// Send the message to the parent actor
-					ctx.Send(ctx.Parent(), &assemblyTaskEvent)
-					continue
-				}
-			default:
-				logger.Get().Warn("Failed to map event", "Event", m)
-			}
+			logger.Get().Warn("Failed to map event", "Event", m)
 		}
 	}
 }

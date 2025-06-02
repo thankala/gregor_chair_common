@@ -13,7 +13,6 @@ type OrchestratorActor[T any] struct {
 	server       interfaces.Server
 	serverPid    *actor.PID
 	started      bool
-	stopCh       chan struct{}
 }
 
 func NewOrchestratorActor[T any](actorInstance interfaces.Orchestrator[T], server interfaces.Server) actor.Producer {
@@ -23,46 +22,36 @@ func NewOrchestratorActor[T any](actorInstance interfaces.Orchestrator[T], serve
 }
 
 func (a *OrchestratorActor[T]) Receive(ctx *actor.Context) {
-	switch msg := ctx.Message().(type) {
+	switch event := ctx.Message().(type) {
 	case actor.Initialized:
 		if value, ok := a.instance.(interfaces.Initializable); ok {
-			value.OnInitialized(msg, ctx)
+			value.OnInitialized(event, ctx)
 		}
 	case actor.Started:
 		a.started = true
 		if a.server != nil {
-			a.stopCh = make(chan struct{})
 			a.serverPid = ctx.SpawnChild(a.server.GetProducer(), "server")
 		}
 	case actor.Stopped:
 		a.started = false
-		if a.stopCh != nil {
-			close(a.stopCh)
-		}
 	case *events.AssemblyTaskEvent:
 		if a.server != nil {
-			ctx.Send(a.serverPid, msg)
+			ctx.Send(a.serverPid, event)
 		} else {
-			ctx.Send(ctx.Parent(), msg)
+			ctx.Send(ctx.Parent(), event)
 		}
 	case *events.OrchestratorEvent:
-		if msg.Destination == a.orchestrator {
-			switch msg.Type {
-			case enums.ComponentPlaced:
-				a.instance.ComponentPlaced(msg)
-			case enums.FixtureRequested:
-				a.instance.FixtureRequested(msg)
-			case enums.ComponentAttached:
-				a.instance.ComponentAttached(msg)
-			default:
-				panic("unhandled default case")
-			}
-			a.instance.Process(ctx)
+		if event.Type == enums.AssemblyStarted {
+			a.instance.StartAssembly(ctx, event)
+			return
+		}
+		if event.Destination == a.orchestrator {
+			a.instance.Process(ctx, event)
 		} else {
 			if a.server != nil {
-				ctx.Send(a.serverPid, msg)
+				ctx.Send(a.serverPid, event)
 			} else {
-				ctx.Send(ctx.Parent(), msg)
+				ctx.Send(ctx.Parent(), event)
 			}
 		}
 	default:

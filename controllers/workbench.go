@@ -11,7 +11,6 @@ import (
 	"github.com/thankala/gregor_chair_common/logger"
 	"github.com/thankala/gregor_chair_common/models"
 	"github.com/thankala/gregor_chair_common/states"
-	"github.com/thankala/gregor_chair_common/utilities"
 )
 
 type WorkbenchController struct {
@@ -30,13 +29,10 @@ func NewWorkbenchController(storer interfaces.Storer, httpClient interfaces.Http
 		configuration: workbenchControllerConfiguration,
 		httpClient:    httpClient,
 	}
-	controller.resetState()
-	controller.resetLEDs()
 	return controller
 }
 
 // Fixture Management
-
 func (c *WorkbenchController) Key() enums.Workbench {
 	return c.configuration.Key
 }
@@ -62,7 +58,7 @@ func (c *WorkbenchController) canRotateInternal(initialized bool, fixtures []mod
 	isInitialConfiguration := !initialized && fixtures[0].Component.Stage() == enums.LegsAttached && fixtures[1].Component.Stage() == enums.Initial && fixtures[2].Component.Stage() == enums.Initial
 
 	// Or if the first fixture is at stage LegsAttached ant the second fixture is at stage SeatAttached and the third fixture is at stage Initial, it can rotate
-	isEveryConfiguration := initialized && fixtures[0].Component.Stage() == enums.LegsAttached && fixtures[1].Component.Stage() == enums.SeatAttached && fixtures[2].Component.Stage() == enums.Initial
+	isEveryConfiguration := initialized && fixtures[0].Component.Stage() == enums.LegsAttached && fixtures[1].Component.Stage() == enums.SeatAttached && (fixtures[2].Component.Stage() == enums.Initial || fixtures[2].Component.Stage() == enums.Chair)
 
 	return has3Fixtures && (isInitialConfiguration || isEveryConfiguration)
 }
@@ -72,19 +68,33 @@ func (c *WorkbenchController) GetFixturesContent() []models.FixtureContent {
 	return c.getFixturesContentInternal(state)
 }
 
+func (c *WorkbenchController) FindFixtureContentByFixture(contents []models.FixtureContent, fixture enums.Fixture) models.FixtureContent {
+	idx := slices.IndexFunc(contents, func(c models.FixtureContent) bool {
+		return c.Fixture == fixture
+	})
+	if idx == -1 {
+		panic("Invalid fixture")
+	}
+	return contents[idx]
+}
+
 func (c *WorkbenchController) CanRotate() bool {
 	state := c.loadState()
 	fixtures := c.getFixturesContentInternal(state)
 	return c.canRotateInternal(state.Initialized, fixtures)
 }
 
-func (c *WorkbenchController) SetFixtureOwner(task enums.Task, caller string, fixture enums.Fixture) {
+func (c *WorkbenchController) SetFixtureOwner(task enums.Task, caller enums.Robot, fixture enums.Fixture) enums.Component {
 	state := c.loadState()
 	fixtureConfiguration := c.getFixtureConfiguration(caller, fixture)
 	fixtureState := state.Fixtures[fixtureConfiguration.Fixture]
 	fixtureState.Owner = task
+	if fixtureState.Owner != enums.NoneTask {
+		c.SetLED(fixture, "ASSEMBLING")
+	}
 	state.Fixtures[fixtureConfiguration.Fixture] = fixtureState
 	c.storeState(state)
+	return fixtureState.Component
 }
 
 func (c *WorkbenchController) RotateFixtures() []models.FixtureContent {
@@ -120,8 +130,7 @@ func (c *WorkbenchController) RotateFixtures() []models.FixtureContent {
 }
 
 // Item Management
-
-func (c *WorkbenchController) GetItem(task enums.Task, caller string, fixture enums.Fixture) enums.Component {
+func (c *WorkbenchController) ReleaseItem(task enums.Task, caller enums.Robot, fixture enums.Fixture) enums.Component {
 	state := c.loadState()
 	fixtureConfiguration := c.getFixtureConfiguration(caller, fixture)
 	fixtureState := state.Fixtures[fixtureConfiguration.Fixture]
@@ -146,7 +155,7 @@ func (c *WorkbenchController) GetItem(task enums.Task, caller string, fixture en
 	return component
 }
 
-func (c *WorkbenchController) SetItem(task enums.Task, caller string, fixture enums.Fixture, component enums.Component) {
+func (c *WorkbenchController) SetItem(task enums.Task, caller enums.Robot, fixture enums.Fixture, component enums.Component) {
 	state := c.loadState()
 	fixtureConfiguration := c.getFixtureConfiguration(caller, fixture)
 	fixtureState := state.Fixtures[fixtureConfiguration.Fixture]
@@ -168,7 +177,7 @@ func (c *WorkbenchController) SetItem(task enums.Task, caller string, fixture en
 	c.storeState(state)
 }
 
-func (c *WorkbenchController) AttachItem(task enums.Task, caller string, fixture enums.Fixture, component enums.Component) {
+func (c *WorkbenchController) AttachItem(task enums.Task, caller enums.Robot, fixture enums.Fixture, component enums.Component) {
 	state := c.loadState()
 	fixtureConfiguration := c.getFixtureConfiguration(caller, fixture)
 	fixtureState := state.Fixtures[fixtureConfiguration.Fixture]
@@ -176,17 +185,22 @@ func (c *WorkbenchController) AttachItem(task enums.Task, caller string, fixture
 	if fixtureState.Owner != task {
 		panic(fmt.Sprintf("Fixture \"%s\" is not owned by task \"%s\". It is owned by \"%s\"", fixtureConfiguration.Fixture.String(), task, fixtureState.Owner))
 	}
+	fixtureState.Component |= component
 
 	// TODO: Add machine integration
 	if c.httpClient != nil {
+		value := "PENDING"
+		if fixtureState.Component.Stage() == enums.Chair || fixtureState.Component.Stage() == enums.LegsAttached || fixtureState.Component.Stage() == enums.SeatAttached {
+			value = "COMPLETED"
+		}
+
 		if _, err := c.httpClient.Post("/fixtures/"+fixture.StringShort(), map[string]interface{}{
-			"state": "PENDING",
+			"state": value,
 		}); err != nil {
 			panic(err)
 		}
 	}
 
-	fixtureState.Component |= component
 	state.Fixtures[fixtureConfiguration.Fixture] = fixtureState
 	c.storeState(state)
 }
@@ -194,47 +208,11 @@ func (c *WorkbenchController) AttachItem(task enums.Task, caller string, fixture
 func (c *WorkbenchController) RemoveCompletedItem() {
 	state := c.loadState()
 	fixtureState := state.Fixtures[enums.Fixture3]
-	if fixtureState.Component.Stage() == enums.Completed {
+	if fixtureState.Component.Stage() == enums.Chair {
 		fixtureState.Component = enums.NoneComponent
 		state.Fixtures[enums.Fixture3] = fixtureState
 		c.storeState(state)
 	}
-}
-
-// Request Management
-func (c *WorkbenchController) PushRequest(request models.Request, fixture enums.Fixture) {
-	state := c.loadState()
-	fixtureConfiguration := c.getFixtureConfiguration(request.Caller, fixture)
-
-	queue := state.Requests[fixtureConfiguration.Fixture]
-	queue.Push(request)
-	state.Requests[fixtureConfiguration.Fixture] = queue
-	c.storeState(state)
-}
-
-func (c *WorkbenchController) PopRequest(fixture enums.Fixture) *models.Request {
-	state := c.loadState()
-
-	queue := state.Requests[fixture]
-	request := queue.Pop()
-	state.Requests[fixture] = queue
-
-	c.storeState(state)
-	return request
-}
-
-func (c *WorkbenchController) PeekRequest(fixture enums.Fixture) *models.Request {
-	state := c.loadState()
-
-	queue := state.Requests[fixture]
-	return queue.Peek()
-}
-
-func (c *WorkbenchController) PeekAllRequests(fixture enums.Fixture) []models.Request {
-	state := c.loadState()
-
-	queue := state.Requests[fixture]
-	return *queue.PeekAll()
 }
 
 func (c *WorkbenchController) SetLED(fixture enums.Fixture, state string) {
@@ -248,29 +226,20 @@ func (c *WorkbenchController) SetLED(fixture enums.Fixture, state string) {
 	}
 }
 
-func (c *WorkbenchController) SetLEDs(fixtures []models.FixtureContent) {
-	for _, fixture := range fixtures {
-		state := c.configuration.StateMapping[fixture.Fixture][fixture.Component.Stage()]
-		c.SetLED(fixture.Fixture, state)
-	}
-}
-
 // State Management
-func (c *WorkbenchController) resetState() {
+func (c *WorkbenchController) ResetState() {
 	state := states.WorkbenchState{}
 	state.Fixtures = make(map[enums.Fixture]states.FixtureState)
-	state.Requests = make(map[enums.Fixture]utilities.Queue[models.Request])
 	for _, fixtureConfiguration := range c.configuration.Fixtures {
 		state.Fixtures[fixtureConfiguration.Fixture] = states.FixtureState{
 			Owner:     enums.NoneTask,
 			Component: enums.NoneComponent,
 		}
-		state.Requests[fixtureConfiguration.Fixture] = []models.Request{}
 	}
 	c.storeState(state)
 }
 
-func (c *WorkbenchController) resetLEDs() {
+func (c *WorkbenchController) ResetLEDs() {
 	fixtures := c.GetFixturesContent()
 	for _, fixture := range fixtures {
 		c.SetLED(fixture.Fixture, "FREE")
@@ -300,13 +269,13 @@ func (c *WorkbenchController) storeState(state states.WorkbenchState) {
 }
 
 // Configuration Management
-func (c *WorkbenchController) getFixtureConfiguration(caller string, fixture enums.Fixture) configuration.FixtureConfiguration {
+func (c *WorkbenchController) getFixtureConfiguration(caller enums.Robot, fixture enums.Fixture) *configuration.FixtureConfiguration {
 	fixtureIndex := slices.IndexFunc(c.configuration.Fixtures, func(fixtureConfiguration configuration.FixtureConfiguration) bool {
-		return fixtureConfiguration.Fixture == fixture && slices.Contains(fixtureConfiguration.Subscribers, caller)
+		return fixtureConfiguration.Fixture == fixture && slices.Contains(fixtureConfiguration.Subscribers, caller.String())
 	})
 	if fixtureIndex == -1 {
 		panic("Invalid fixture")
 	}
 
-	return c.configuration.Fixtures[fixtureIndex]
+	return &c.configuration.Fixtures[fixtureIndex]
 }
