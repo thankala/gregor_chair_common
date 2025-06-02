@@ -1,17 +1,40 @@
 package enums
 
-type Fixture int
+type Fixture string
 
 const (
-	Fixture1 Fixture = iota
-	Fixture2
-	Fixture3
+	NoneFixture Fixture = "NoneFixture"
+	Fixture1    Fixture = "Fixture1"
+	Fixture2    Fixture = "Fixture2"
+	Fixture3    Fixture = "Fixture3"
 )
 
 func (f Fixture) String() string {
-	return [...]string{"Fixture1", "Fixture2", "Fixture3"}[f]
+	return string(f)
 }
 
 func (f Fixture) StringShort() string {
-	return [...]string{"F1", "F2", "F3"}[f]
+	switch f {
+	case Fixture1:
+		return "F1"
+	case Fixture2:
+		return "F2"
+	case Fixture3:
+		return "F3"
+	default:
+		return "NoneFixture"
+	}
+}
+
+type FixtureState string
+
+const (
+	Free       FixtureState = "FREE"
+	Assembling FixtureState = "ASSEMBLING"
+	Pending    FixtureState = "PENDING"
+	Completed  FixtureState = "COMPLETED"
+)
+
+func (w FixtureState) String() string {
+	return string(w)
 }

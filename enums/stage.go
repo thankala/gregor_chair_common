@@ -3,30 +3,28 @@ package enums
 type Stage int
 
 const (
-	Initial            = Stage(NoneComponent)
-	LegsAttached       = Stage(NoneComponent | Legs)
-	BaseAttached       = Stage(NoneComponent | Legs | Base)
-	CastorsAttached    = Stage(NoneComponent | Legs | Base | Castors)
-	LiftAttached       = Stage(NoneComponent | Legs | Base | Castors | Lift)
-	InitialSeat        = Stage(NoneComponent | Seat)
-	SeatPlateAttached  = Stage(NoneComponent | Seat | SeatPlate)
-	SeatScrewsAttached = Stage(NoneComponent | Seat | SeatPlate | SeatScrews)
-	SeatAttached       = Stage(NoneComponent | Legs | Base | Castors | Lift | Seat | SeatPlate | SeatScrews)
-	ScrewsAttached     = Stage(NoneComponent | Legs | Base | Castors | Lift | Seat | SeatPlate | SeatScrews | Screws)
-	BackAttached       = Stage(NoneComponent | Legs | Base | Castors | Lift | Seat | SeatPlate | SeatScrews | Screws | Back)
-	LeftArmAttached    = Stage(NoneComponent | Legs | Base | Castors | Lift | Seat | SeatPlate | SeatScrews | Screws | Back | LeftArm)
-	RightArmAttached   = Stage(NoneComponent | Legs | Base | Castors | Lift | Seat | SeatPlate | SeatScrews | Screws | Back | RightArm)
-	Completed          = Stage(NoneComponent | Legs | Base | Castors | Lift | Seat | SeatPlate | SeatScrews | Screws | Back | LeftArm | RightArm)
+	Initial           = Stage(NoneComponent)
+	InitialBase       = Stage(NoneComponent | Base)
+	LegsAttached      = Stage(NoneComponent | Base | Legs)
+	CastorsAttached   = Stage(NoneComponent | Base | Legs | Castors)
+	LiftAttached      = Stage(NoneComponent | Base | Legs | Castors | Lift)
+	InitialSeat       = Stage(NoneComponent | Seat)
+	SeatPlateAttached = Stage(NoneComponent | Seat | SeatPlate)
+	SeatAttached      = Stage(NoneComponent | Base | Legs | Castors | Lift | Seat | SeatPlate)
+	BackAttached      = Stage(NoneComponent | Base | Legs | Castors | Lift | Seat | SeatPlate | Back)
+	LeftArmAttached   = Stage(NoneComponent | Base | Legs | Castors | Lift | Seat | SeatPlate | Back | LeftArm)
+	RightArmAttached  = Stage(NoneComponent | Base | Legs | Castors | Lift | Seat | SeatPlate | Back | RightArm)
+	Chair             = Stage(NoneComponent | Base | Legs | Castors | Lift | Seat | SeatPlate | Back | LeftArm | RightArm)
 )
 
 func (s Stage) String() string {
 	switch s {
 	case Initial:
 		return "Initial"
+	case InitialBase:
+		return "InitialBase"
 	case LegsAttached:
 		return "LegsAttached"
-	case BaseAttached:
-		return "BaseAttached"
 	case SeatAttached:
 		return "SeatAttached"
 	case CastorsAttached:
@@ -37,8 +35,10 @@ func (s Stage) String() string {
 		return "BackAttached"
 	case LeftArmAttached:
 		return "LeftArmAttached"
-	case Completed:
-		return "Completed"
+	case RightArmAttached:
+		return "RightArmAttached"
+	case Chair:
+		return "Chair"
 	default:
 		return "Unknown"
 	}

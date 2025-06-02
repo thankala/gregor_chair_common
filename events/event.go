@@ -1,7 +1,8 @@
-package messages
+package events
 
 import (
 	"encoding/json"
+
 	"github.com/thankala/gregor_chair_common/enums"
 )
 

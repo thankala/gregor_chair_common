@@ -1,17 +1,26 @@
 package enums
 
-type ConveyorBelt int
+type ConveyorBelt string
 
 const (
-	ConveyorBelt1 ConveyorBelt = iota
-	ConveyorBelt2
-	ConveyorBelt3
+	ConveyorBelt1 ConveyorBelt = "ConveyorBelt1"
+	ConveyorBelt2 ConveyorBelt = "ConveyorBelt2"
+	ConveyorBelt3 ConveyorBelt = "ConveyorBelt3"
 )
 
-func (c ConveyorBelt) String() string {
-	return [...]string{"ConveyorBelt1", "ConveyorBelt2", "ConveyorBelt3"}[c]
+func (cb ConveyorBelt) String() string {
+	return string(cb)
 }
 
-func (c ConveyorBelt) StringShort() string {
-	return [...]string{"CB1", "CB2", "CB3"}[c]
+func (cb ConveyorBelt) StringShort() string {
+	switch {
+	case cb == ConveyorBelt1:
+		return "CB1"
+	case cb == ConveyorBelt2:
+		return "CB2"
+	case cb == ConveyorBelt3:
+		return "CB3"
+	default:
+		return "N"
+	}
 }

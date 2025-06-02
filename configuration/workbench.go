@@ -1,25 +1,28 @@
 package configuration
 
-import "github.com/thankala/gregor_chair_common/enums"
+import (
+	"github.com/thankala/gregor_chair_common/enums"
+)
 
 type FixtureConfiguration struct {
 	Fixture     enums.Fixture
 	Subscribers []string
 }
 
-func NewFixtureConfiguration(fixture enums.Fixture, subscribers []string) *FixtureConfiguration {
+type FixtureConfigurationFunc func(configuration *FixtureConfiguration)
+
+func NewFixtureConfiguration(fixture enums.Fixture, subscribers []string, possibleStates []enums.FixtureState) *FixtureConfiguration {
 	return &FixtureConfiguration{Fixture: fixture, Subscribers: subscribers}
 }
 
 type WorkbenchControllerConfiguration struct {
-	Key          string
-	Fixtures     []FixtureConfiguration
-	StateMapping map[enums.Fixture]map[enums.Stage]string
+	Key      enums.Workbench
+	Fixtures []FixtureConfiguration
 }
 
 type WorkbenchControllerConfigurationFunc func(configuration *WorkbenchControllerConfiguration)
 
-func WithWorkbenchKey(key string) WorkbenchControllerConfigurationFunc {
+func WithWorkbenchKey(key enums.Workbench) WorkbenchControllerConfigurationFunc {
 	return func(configuration *WorkbenchControllerConfiguration) {
 		configuration.Key = key
 	}
@@ -28,11 +31,5 @@ func WithWorkbenchKey(key string) WorkbenchControllerConfigurationFunc {
 func WithFixture(fixtures ...FixtureConfiguration) WorkbenchControllerConfigurationFunc {
 	return func(configuration *WorkbenchControllerConfiguration) {
 		configuration.Fixtures = fixtures
-	}
-}
-
-func WithStateMapping(mapping map[enums.Fixture]map[enums.Stage]string) WorkbenchControllerConfigurationFunc {
-	return func(configuration *WorkbenchControllerConfiguration) {
-		configuration.StateMapping = mapping
 	}
 }

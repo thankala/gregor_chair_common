@@ -4,7 +4,7 @@ import "github.com/thankala/gregor_chair_common/enums"
 
 type RobotState struct {
 	Item     enums.Component
-	Task     enums.AssemblyTask
+	Task     enums.Task
 	Position enums.Position
 	Facing   string
 }
