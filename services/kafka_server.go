@@ -62,7 +62,7 @@ func (k *ConfluentKafkaServer) Receive(ctx *actor.Context) {
 	case actor.Initialized:
 		// Do nothing
 	case actor.Started:
-		k.Accept(ctx)
+		go k.Accept(ctx)
 	case *events.AssemblyTaskEvent:
 		k.Send(event.Source.String(), event.Destination.String(), enums.AssemblyTaskEvent, event)
 	case *events.OrchestratorEvent:
@@ -122,7 +122,7 @@ func (k *ConfluentKafkaServer) Send(from string, to string, event enums.Event, m
 			switch ev := e.(type) {
 			case *kafka.Message:
 				if ev.TopicPartition.Error != nil {
-					logger.Get().Error("Delivery failed", ev.TopicPartition)
+					logger.Get().Error("Delivery failed", ev.TopicPartition.String())
 				} else {
 					logger.Get().Info("Delivered message", ev.TopicPartition)
 				}
