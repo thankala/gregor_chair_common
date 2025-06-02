@@ -11,7 +11,7 @@ type FixtureConfiguration struct {
 
 type FixtureConfigurationFunc func(configuration *FixtureConfiguration)
 
-func NewFixtureConfiguration(fixture enums.Fixture, subscribers []string, possibleStates []enums.FixtureState) *FixtureConfiguration {
+func NewFixtureConfiguration(fixture enums.Fixture, subscribers []string) *FixtureConfiguration {
 	return &FixtureConfiguration{Fixture: fixture, Subscribers: subscribers}
 }
 
