@@ -54,7 +54,7 @@ func (c *RobotController) ResetRobot() {
 	}
 }
 
-func (c *RobotController) MoveToStorage(storage enums.Storage) {
+func (c *RobotController) MoveToStorage(storage enums.Storage, numberOfRuns int) {
 	storageConfiguration := c.getStorageConfiguration(storage)
 	state := c.loadState()
 	state.Position = storageConfiguration.Position
@@ -65,10 +65,10 @@ func (c *RobotController) MoveToStorage(storage enums.Storage) {
 		}
 	}
 	c.storeState(state)
-	logger.Get().Info("Robot moved to storage", "Robot", c.configuration.Key, "Storage", storage.String(), "Task", c.GetCurrentTask())
+	logger.Get().Info("Robot moved to storage", "Robot", c.configuration.Key, "Storage", storage.String(), "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
-func (c *RobotController) MoveToWorkbench(workbench enums.Workbench) {
+func (c *RobotController) MoveToWorkbench(workbench enums.Workbench, numberOfRuns int) {
 	workbenchConfiguration := c.getWorkbenchConfiguration(workbench)
 	state := c.loadState()
 	state.Position = workbenchConfiguration.Position
@@ -79,10 +79,10 @@ func (c *RobotController) MoveToWorkbench(workbench enums.Workbench) {
 		}
 	}
 	c.storeState(state)
-	logger.Get().Info("Robot moved to workbench", "Robot", c.configuration.Key, "Workbench", workbench.String(), "Task", c.GetCurrentTask())
+	logger.Get().Info("Robot moved to workbench", "Robot", c.configuration.Key, "Workbench", workbench.String(), "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
-func (c *RobotController) MoveToConveyorBelt(conveyorBelt enums.ConveyorBelt) {
+func (c *RobotController) MoveToConveyorBelt(conveyorBelt enums.ConveyorBelt, numberOfRuns int) {
 	conveyorBeltConfiguration := c.getConveyorBeltConfiguration(conveyorBelt)
 	state := c.loadState()
 	state.Position = conveyorBeltConfiguration.Position
@@ -93,61 +93,61 @@ func (c *RobotController) MoveToConveyorBelt(conveyorBelt enums.ConveyorBelt) {
 		}
 	}
 	c.storeState(state)
-	logger.Get().Info("Robot moved to conveyor belt", "Robot", c.configuration.Key, "Conveyor Belt", conveyorBelt.String(), "Task", c.GetCurrentTask())
+	logger.Get().Info("Robot moved to conveyor belt", "Robot", c.configuration.Key, "Conveyor Belt", conveyorBelt.String(), "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
-func (c *RobotController) Pick() {
+func (c *RobotController) Pick(numberOfRuns int) {
 	if c.httpClient != nil {
 		if _, err := c.httpClient.Post("/primitive/grip", nil); err != nil {
 			panic(err)
 		}
 	}
-	logger.Get().Info("Grip executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
+	logger.Get().Info("Grip executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
-func (c *RobotController) Place() {
+func (c *RobotController) Place(numberOfRuns int) {
 	if c.httpClient != nil {
 		if _, err := c.httpClient.Post("/primitive/ungrip", nil); err != nil {
 			panic(err)
 		}
 	}
-	logger.Get().Info("Ungrip executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
+	logger.Get().Info("Ungrip executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
-func (c *RobotController) Screw() {
+func (c *RobotController) Screw(numberOfRuns int) {
 	if c.httpClient != nil {
 		if _, err := c.httpClient.Post("/composite/screw", nil); err != nil {
 			panic(err)
 		}
 	}
-	logger.Get().Info("Screw executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
+	logger.Get().Info("Screw executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
-func (c *RobotController) Flip() {
+func (c *RobotController) Flip(numberOfRuns int) {
 	if c.httpClient != nil {
 		if _, err := c.httpClient.Post("/composite/flip", nil); err != nil {
 			panic(err)
 		}
 	}
-	logger.Get().Info("Flip executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
+	logger.Get().Info("Flip executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
-func (c *RobotController) Press() {
+func (c *RobotController) Press(numberOfRuns int) {
 	if c.httpClient != nil {
 		if _, err := c.httpClient.Post("/composite/press", nil); err != nil {
 			panic(err)
 		}
 	}
-	logger.Get().Info("Press executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
+	logger.Get().Info("Press executed", "Robot", c.configuration.Key, "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
 // Pickup items
 
-func (c *RobotController) PickupItemFromWorkbench(item enums.Component, workbench enums.Workbench) {
+func (c *RobotController) PickupItemFromWorkbench(item enums.Component, workbench enums.Workbench, numberOfRuns int) {
 	state := c.loadState()
 	workbenchConfiguration := c.getWorkbenchConfiguration(workbench)
 	if state.Facing != workbenchConfiguration.Workbench.String() || state.Position != workbenchConfiguration.Position {
-		panic(fmt.Sprintf("Robot %s is facing %s and not specified coordinator_1 %s", c.configuration.Key, state.Facing, workbench.String()))
+		panic(fmt.Sprintf("Robot %s is facing %s and not specified workbench %s", c.configuration.Key, state.Facing, workbench.String()))
 	}
 
 	body := map[string]bool{
@@ -168,10 +168,10 @@ func (c *RobotController) PickupItemFromWorkbench(item enums.Component, workbenc
 
 	state.Item = item
 	c.storeState(state)
-	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", item.String(), "From", workbench.String(), "Task", c.GetCurrentTask())
+	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", item.String(), "From", workbench.String(), "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
-func (c *RobotController) PickupItemFromStorage(storage enums.Storage) {
+func (c *RobotController) PickupItemFromStorage(storage enums.Storage, numberOfRuns int) {
 	state := c.loadState()
 	storageConfiguration := c.getStorageConfiguration(storage)
 	if state.Facing != storageConfiguration.Storage.String() || state.Position != storageConfiguration.Position {
@@ -196,10 +196,10 @@ func (c *RobotController) PickupItemFromStorage(storage enums.Storage) {
 
 	state.Item = storageConfiguration.Component
 	c.storeState(state)
-	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", storageConfiguration.Component.String(), "From", storage.String(), "Task", c.GetCurrentTask())
+	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", storageConfiguration.Component.String(), "From", storage.String(), "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
-func (c *RobotController) PickupItemFromConveyorBelt(conveyorBelt enums.ConveyorBelt) {
+func (c *RobotController) PickupItemFromConveyorBelt(conveyorBelt enums.ConveyorBelt, numberOfRuns int) {
 	state := c.loadState()
 	conveyorBeltConfiguration := c.getConveyorBeltConfiguration(conveyorBelt)
 	if state.Facing != conveyorBeltConfiguration.ConveyorBelt.String() || state.Position != conveyorBeltConfiguration.Position {
@@ -224,14 +224,14 @@ func (c *RobotController) PickupItemFromConveyorBelt(conveyorBelt enums.Conveyor
 
 	state.Item = conveyorBeltConfiguration.Component
 	c.storeState(state)
-	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", conveyorBeltConfiguration.Component.String(), "From", conveyorBelt.String(), "Task", c.GetCurrentTask())
+	logger.Get().Info("Robot picked up item", "Robot", c.configuration.Key, "Item", conveyorBeltConfiguration.Component.String(), "From", conveyorBelt.String(), "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 }
 
 // Pickup and deposit items
-func (c *RobotController) ReleaseItem() enums.Component {
+func (c *RobotController) ReleaseItem(numberOfRuns int) enums.Component {
 	state := c.loadState()
 	item := state.Item
-	logger.Get().Info("Robot released item", "Robot", c.configuration.Key, "Item", item.String(), "Task", c.GetCurrentTask())
+	logger.Get().Info("Robot released item", "Robot", c.configuration.Key, "Item", item.String(), "Task", c.GetCurrentTask(), "Chair", numberOfRuns)
 	state.Item = enums.NoneComponent
 	c.storeState(state)
 	return item
@@ -264,7 +264,7 @@ func (c *RobotController) GetCurrentTask() enums.Task {
 	return state.Task
 }
 
-func (c *RobotController) SetCurrentTask(task enums.Task) error {
+func (c *RobotController) SetCurrentTask(task enums.Task, numberOfChair int) error {
 	res, err := c.acquireLock(task)
 
 	if err != nil {
@@ -281,13 +281,13 @@ func (c *RobotController) SetCurrentTask(task enums.Task) error {
 	}
 	state.Task = task
 	c.storeState(state)
-	logger.Get().Info("Robot started task", "Robot", c.configuration.Key, "Task", c.GetCurrentTask())
+	logger.Get().Info("Robot started task", "Robot", c.configuration.Key, "Task", c.GetCurrentTask(), "Chair", numberOfChair)
 	return nil
 }
 
-func (c *RobotController) ClearCurrentTask() {
+func (c *RobotController) ClearCurrentTask(numberOfChair int) {
 	state := c.loadState()
-	logger.Get().Info("Robot ended task", "Robot", c.configuration.Key, "Task", state.Task.String())
+	logger.Get().Info("Robot ended task", "Robot", c.configuration.Key, "Task", state.Task.String(), "Chair", numberOfChair)
 	state.Task = enums.NoneTask
 	c.storeState(state)
 	c.releaseLock()
@@ -361,7 +361,7 @@ func (c *RobotController) getConveyorBeltConfiguration(conveyorBelt enums.Convey
 		return conveyorBeltConfiguration.ConveyorBelt == conveyorBelt
 	})
 	if conveyorBeltIndex == -1 {
-		panic("Invalid storage")
+		panic("Invalid conveyorbelt")
 	}
 	return c.configuration.ConveyorBelts[conveyorBeltIndex]
 }

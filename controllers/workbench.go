@@ -84,6 +84,15 @@ func (c *WorkbenchController) CanRotate() bool {
 	return c.canRotateInternal(state.Initialized, fixtures)
 }
 
+func (c *WorkbenchController) HasAssembledFinished() bool {
+	state := c.loadState()
+	fixtures := c.getFixturesContentInternal(state)
+	if len(fixtures) == 3 && fixtures[2].Component.Stage() == enums.Chair {
+		return true
+	}
+	return false
+}
+
 func (c *WorkbenchController) SetFixtureOwner(task enums.Task, caller enums.Robot, fixture enums.Fixture) enums.Component {
 	state := c.loadState()
 	fixtureConfiguration := c.getFixtureConfiguration(caller, fixture)
